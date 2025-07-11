@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const testLocalStorageData = localStorage.getItem('winChallengeTitle');
         document.getElementById('overlayChallengeTitle').textContent = `DEBUG: Titel: ${testLocalStorageData || 'NICHT GEFUNDEN'}`;
-    
-// Hauptfunktion zum Aktualisieren des Overlays
+
+    // Hauptfunktion zum Aktualisieren des Overlays
     const updateOverlay = () => {
         // Titel laden
         const savedTitle = localStorage.getItem('winChallengeTitle');
