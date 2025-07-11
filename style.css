@@ -1,0 +1,115 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Oben ausrichten */
+    min-height: 100vh; /* Mindestens volle Bildschirmhöhe */
+    margin: 20px; /* Etwas Abstand vom Rand */
+    padding: 0;
+    box-sizing: border-box; /* Besser für Breitenberechnungen */
+}
+
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px; /* Maximale Breite des Containers */
+    margin-top: 20px; /* Abstand nach oben, wenn flex-start verwendet wird */
+}
+
+h1, h2, h3 {
+    color: #0056b3;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input[type="text"] {
+    width: calc(100% - 10px); /* Volle Breite minus Padding */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Stellt sicher, dass Padding nicht die Breite erhöht */
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-right: 10px; /* Abstand zwischen Buttons */
+    margin-bottom: 10px; /* Für den Fall, dass sie untereinander stehen */
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse; /* Rahmen der Zellen verschmelzen */
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9; /* Abwechselnde Zeilenfarben */
+}
+
+.completed {
+    text-decoration: line-through; /* Text durchstreichen */
+    color: #777; /* Farbe etwas heller machen */
+}
+
+.total-time-section {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+#totalTimeDisplay {
+    font-size: 2em; /* Größer für den Timer */
+    font-weight: bold;
+    color: #28a745; /* Grüne Farbe für den Timer */
+}
+
+/* Spezifische Button-Anpassungen für den Timer */
+#startTimerButton {
+    background-color: #28a745; /* Grün */
+}
+#startTimerButton:hover {
+    background-color: #218838;
+}
+#stopTimerButton {
+    background-color: #ffc107; /* Gelb */
+    color: #333; /* Schwarzer Text auf gelb */
+}
+#stopTimerButton:hover {
+    background-color: #e0a800;
+}
+#resetTimerButton {
+    background-color: #dc3545; /* Rot */
+}
+#resetTimerButton:hover {
+    background-color: #c82333;
+}

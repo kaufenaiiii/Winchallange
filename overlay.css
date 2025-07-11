@@ -1,0 +1,156 @@
+/* Grundlegende Einstellungen für das gesamte Overlay */
+body {
+    background-color: rgba(0, 0, 0, 0); /* Bleibt transparent für OBS */
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Roboto', sans-serif;
+    color: #FFFFFF; /* Weiße Schrift */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+#overlay-container {
+    width: 320px; /* Breite der "Box" etwas vergrößert, anpassbar */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Zentriert alle Kindelemente horizontal */
+    justify-content: flex-start;
+    padding: 15px; /* Innenabstand der Box */
+    box-sizing: border-box;
+    
+    background-color: rgba(0, 0, 0, 0.7); /* Halbdurchsichtiger dunkler Hintergrund */
+    border: 2px solid #FFD700; /* Goldener Rahmen, passend zum Titel */
+    border-radius: 10px; /* Abgerundete Ecken */
+}
+
+/* Titel der Challenge */
+#overlay-challenge-title {
+    font-size: 2.5em; /* Etwas größerer Titel */
+    font-weight: 700; /* Roboto Bold */
+    color: #FFD700; /* Goldgelb */
+    margin-bottom: 20px; /* KORREKTUR: Mehr Abstand zum ersten Element */
+    text-transform: uppercase;
+    text-align: center;
+    width: 100%;
+}
+
+/* Liste der Spiele */
+#overlay-game-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 90%;
+    /* max-height: 250px; /* Lassen wir dies erstmal weg, wenn nur 1 Spiel angezeigt wird, um Flexibilität zu haben */
+    overflow-y: hidden;
+    margin-bottom: 15px; /* KORREKTUR: Mehr Abstand zur Gesamtzeit */
+}
+
+.game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.5em; /* KORREKTUR: Angepasste Schriftgröße für Spielnamen */
+    padding: 8px 0; /* Vertikaler Abstand */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-item:last-child {
+    border-bottom: none;
+}
+
+.game-name {
+    flex-grow: 1;
+    margin-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-time {
+    font-weight: bold;
+    color: #ADD8E6;
+    flex-shrink: 0;
+}
+
+/* Stil für das aktuell aktive Spiel */
+.game-item.active-game {
+    color: #4CAF50; /* Grün */
+    font-weight: bold;
+    /* border-bottom: 2px solid #4CAF50; */
+}
+.game-item.active-game .game-time {
+    color: #7FFF00; /* Leuchtenderes Grün */
+}
+
+/* Stil für abgeschlossene Spiele */
+.game-item.completed-game {
+    color: #888888;
+    text-decoration: line-through;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.game-item.completed-game .game-time {
+    color: #666666;
+}
+
+/* Nachricht, wenn keine Spiele hinzugefügt wurden */
+.no-games-message {
+    font-size: 1.3em; /* KORREKTUR: Schriftgröße für "Keine Spiele hinzugefügt" angepasst */
+    color: #aaaaaa;
+    text-align: center;
+    width: 100%;
+    padding: 20px 0; /* KORREKTUR: Padding erhöht, damit es mittiger wirkt */
+}
+
+/* Gesamtzeit-Anzeige */
+#overlay-total-time-container {
+    font-size: 2.2em; /* KORREKTUR: Größe angepasst */
+    font-weight: bold;
+    color: #FFFFFF;
+    margin-top: 15px; /* KORREKTUR: Abstand nach oben zur Liste */
+    text-align: center;
+    width: 100%;
+}
+#overlay-total-time {
+    color: #1E90FF;
+}
+
+/* Seitenindikatoren (Punkte) */
+#page-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    width: 100%;
+}
+
+.page-dot {
+    width: 10px;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    margin: 0 5px;
+}
+
+.page-dot.active {
+    background-color: #00BFFF;
+    transform: scale(1.2);
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 400px) {
+    #overlay-container {
+        width: 280px;
+        padding: 10px;
+    }
+    #overlay-challenge-title {
+        font-size: 2.2em;
+    }
+    .game-item {
+        font-size: 1.3em;
+    }
+    #overlay-total-time-container,
+    #overlay-total-time {
+        font-size: 1.8em;
+    }
+}
