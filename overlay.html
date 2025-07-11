@@ -22,6 +22,32 @@
             </div>
     </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBq4i_sSsUoW0T4-K9_TZDpSQU_JDnlLx0",
+  authDomain: "winchallange-overlay.firebaseapp.com",
+  databaseURL: "https://winchallange-overlay-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "winchallange-overlay",
+  storageBucket: "winchallange-overlay.firebasestorage.app",
+  messagingSenderId: "56818331225",
+  appId: "1:56818331225:web:926c7844054efd97ca8b48",
+  measurementId: "G-XB46K9ELE9"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
     <script src="overlay.js"></script>
 </body>
 </html>

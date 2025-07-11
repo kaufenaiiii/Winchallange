@@ -1,8 +1,29 @@
+// script.js (Control Panel für Win Challenge)
+
+// Firebase Initialisierung - DIESER BLOCK MUSS IN DEINER index.html SEIN!
+// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+// <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+// <script>
+//   const firebaseConfig = {
+//     apiKey: "DEIN_API_KEY", // ERSETZE DURCH DEINEN API KEY
+//     authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
+//     databaseURL: "https://DEIN_PROJECT_ID-default-rtdb.europ-west1.firebasedatabase.app", // ERSETZE DURCH DEINE URL
+//     projectId: "DEIN_PROJECT_ID",
+//     storageBucket: "DEIN_PROJECT_ID.appspot.com",
+//     messagingSenderId: "DEIN_SENDER_ID",
+//     appId: "DEIN_APP_ID"
+//   };
+//   const app = firebase.initializeApp(firebaseConfig);
+//   const database = app.database();
+// </script>
+// Ende des Firebase-Initialisierungs-Blocks
+
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOMContentLoaded stellt sicher, dass das HTML geladen ist, bevor JS darauf zugreift
 
     // ----- HTML-Elemente abrufen (Referenzen) -----
-    const challengeTitle = document.getElementById('challengeTitle');
+    const challengeTitleElement = document.getElementById('challengeTitle'); // Umbenannt, um Konflikt mit Variable zu vermeiden
     const challengeTitleInput = document.getElementById('challengeTitleInput');
     const saveTitleButton = document.getElementById('saveTitleButton');
     const gamesTableBody = document.querySelector('#gamesTable tbody');
@@ -12,43 +33,86 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopTimerButton = document.getElementById('stopTimerButton');
     const resetTimerButton = document.getElementById('resetTimerButton');
 
+    // ----- Firebase Referenzen -----
+    const dbRef = database.ref('/winChallengeData'); // Hauptpfad für alle Challenge-Daten
 
-    // ----- Timer-Variablen -----
+    // ----- Lokaler Zustand (wird mit Firebase synchronisiert) -----
     let totalSeconds = 0; // Gesamtsekunden für den Haupttimer
     let timerInterval = null; // Variable, um den Interval-Timer zu speichern
     let currentActiveGameRow = null; // Speichert die aktuell aktive Spielzeile (für den Einzel-Timer)
+    let games = []; // Array für die Spieldaten
+    let challengeTitle = 'Win Challenge'; // Aktueller Titel
 
 
-    // ----- Funktionen für die UI-Interaktion -----
+    // ----- Funktionen für die UI-Interaktion und Firebase-Kommunikation -----
 
-    // Funktion zum Speichern des Challenge-Titels
-    saveTitleButton.addEventListener('click', () => {
-        const newTitle = challengeTitleInput.value.trim(); // .trim() entfernt Leerzeichen am Anfang/Ende
-        if (newTitle) {
-            challengeTitle.textContent = newTitle; // Überschrift aktualisieren
-            localStorage.setItem('winChallengeTitle', newTitle); // Titel im Local Storage speichern
-            challengeTitleInput.value = ''; // Eingabefeld leeren
-        }
-    });
+    // Funktion zum Speichern des gesamten Zustands in Firebase
+    const saveStateToFirebase = () => {
+        const dataToSave = {
+            challengeTitle: challengeTitle,
+            games: games, // Das 'games'-Array enthält bereits die Zeit und completed-Status
+            totalSeconds: totalSeconds,
+            activeGameName: currentActiveGameRow ? currentActiveGameRow.dataset.gameName : null,
+            timerRunning: timerInterval !== null // Speichert, ob der Timer läuft
+        };
 
-    // Funktion zum Laden des Challenge-Titels beim Start
-    const loadChallengeTitle = () => {
-        const savedTitle = localStorage.getItem('winChallengeTitle');
-        if (savedTitle) {
-            challengeTitle.textContent = savedTitle;
-        }
+        dbRef.set(dataToSave)
+            .then(() => {
+                console.log("State successfully saved to Firebase!");
+            })
+            .catch((error) => {
+                console.error("Error saving state to Firebase:", error);
+            });
     };
 
-    // Funktion zum Hinzufügen einer neuen Spielzeile
-    addGameButton.addEventListener('click', () => {
-        const gameName = prompt("Bitte gib den Namen des Spiels ein:");
-        if (gameName) { // Nur hinzufügen, wenn ein Name eingegeben wurde
-            addGameRow(gameName, 0, false); // Neues Spiel hinzufügen, Zeit 0, nicht abgeschlossen
-            saveGames(); // Spiele speichern
-        }
-    });
+    // Funktion zum Laden des Zustands aus Firebase (und setzen der UI)
+    const loadStateFromFirebase = () => {
+        dbRef.once('value', (snapshot) => { // 'once' liest Daten einmal
+            const data = snapshot.val();
+            if (data) {
+                challengeTitle = data.challengeTitle || 'Win Challenge';
+                challengeTitleElement.textContent = challengeTitle; // UI aktualisieren
 
-    const addGameRow = (name, timeInSeconds, isCompleted) => {
+                games = data.games || [];
+                gamesTableBody.innerHTML = ''; // Vorhandene Zeilen leeren
+                games.forEach(game => {
+                    addGameRow(game.name, game.time, game.completed, false); // Fügt Spiele hinzu, speichert aber noch nicht
+                });
+
+                totalSeconds = data.totalSeconds || 0;
+                updateOverallTimerDisplay();
+
+                const savedActiveGameName = data.activeGameName;
+                if (savedActiveGameName) {
+                    const rowToActivate = Array.from(gamesTableBody.querySelectorAll('tr'))
+                                            .find(row => row.dataset.gameName === savedActiveGameName);
+                    if (rowToActivate) {
+                        currentActiveGameRow = rowToActivate;
+                    }
+                }
+                
+                // Aktualisiere den Zustand der Aktivierungs-Buttons nach dem Laden aller Spiele
+                updateActivationButtonStates();
+
+                // Timer-Status wiederherstellen
+                if (data.timerRunning && !timerInterval) { // Nur starten, wenn es vorher lief und jetzt nicht läuft
+                    startTimer(); // Rufe die interne startTimer-Funktion auf
+                }
+            } else {
+                console.log("No data found in Firebase, starting fresh.");
+                challengeTitleElement.textContent = challengeTitle; // Standardtitel setzen
+            }
+        });
+    };
+
+    // Funktion zum Hinzufügen einer neuen Spielzeile zur Tabelle
+    const addGameRow = (name, timeInSeconds, isCompleted, saveAfterAdd = true) => {
+        // Prüfen, ob das Spiel bereits existiert, um Duplikate zu vermeiden
+        if (games.some(game => game.name === name)) {
+            alert(`Ein Spiel mit dem Namen "${name}" existiert bereits!`);
+            return;
+        }
+
         const row = gamesTableBody.insertRow();
         row.dataset.gameName = name;
         row.dataset.time = timeInSeconds;
@@ -58,48 +122,42 @@ document.addEventListener('DOMContentLoaded', () => {
             row.classList.add('completed');
         }
 
-        // --- NEUE ZELLE FÜR AKTIVIERUNGS-BUTTON ---
-        const activationButtonCell = row.insertCell(0); // NEUE Zelle an erster Position
+        const activationButtonCell = row.insertCell(0);
         const activationButton = document.createElement('button');
         activationButton.classList.add('activation-button');
         activationButton.textContent = 'Aktivieren';
-
         activationButton.style.padding = '5px 10px';
         activationButton.style.fontSize = '12px';
         activationButton.style.margin = '0';
         activationButton.style.width = 'fit-content';
-
         activationButtonCell.appendChild(activationButton);
-        // --- ENDE NEUE ZELLE ---
 
-        // KORRIGIERTE INDIZES HIER:
-        const checkboxCell = row.insertCell(1); // Checkbox-Zelle ist an zweiter Position (Index 1)
-        const nameCell = row.insertCell(2);     // Spielname-Zelle ist an dritter Position (Index 2)
-        const timeCell = row.insertCell(3);     // Zeit-Zelle ist jetzt an vierter Position (Index 3)
+        const checkboxCell = row.insertCell(1);
+        const nameCell = row.insertCell(2);
+        const timeCell = row.insertCell(3);
 
-
-        // Checkbox erstellen (jetzt nur noch für den Abgeschlossen-Status)
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = isCompleted;
         checkbox.addEventListener('change', () => {
             row.classList.toggle('completed', checkbox.checked);
             row.dataset.completed = checkbox.checked;
-            saveGames();
+            updateGamesArrayFromTable(); // Games-Array aktualisieren
+            saveStateToFirebase(); // Speichern
 
             if (checkbox.checked && currentActiveGameRow === row) {
                 currentActiveGameRow = null;
-                localStorage.removeItem('activeGameName');
-                updateActivationButtonStates();
+                saveStateToFirebase(); // Änderungen speichern
+                stopTimer(); // Timer stoppen, wenn das aktuell aktive Spiel abgeschlossen wird
             }
+            updateActivationButtonStates(); // Button-Zustände aktualisieren
         });
         checkboxCell.appendChild(checkbox);
 
         nameCell.textContent = name;
         timeCell.textContent = formatTime(timeInSeconds);
 
-        // Optional: Einen Button zum Entfernen des Spiels hinzufügen
-        const removeButtonCell = row.insertCell(4); // Korrekter Index bleibt 4
+        const removeButtonCell = row.insertCell(4);
         const removeButton = document.createElement('button');
         removeButton.textContent = 'Entfernen';
         removeButton.style.backgroundColor = '#dc3545';
@@ -110,56 +168,61 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm(`Soll das Spiel "${name}" wirklich entfernt werden?`)) {
                 if (currentActiveGameRow === row) {
                     currentActiveGameRow = null;
-                    localStorage.removeItem('activeGameName');
+                    stopTimer(); // Timer stoppen, wenn aktives Spiel entfernt wird
                 }
                 row.remove();
-                saveGames();
+                updateGamesArrayFromTable(); // Games-Array aktualisieren
+                saveStateToFirebase(); // Speichern
                 updateActivationButtonStates();
             }
         });
         removeButtonCell.appendChild(removeButton);
 
-        // --- LOGIK FÜR DEN NEUEN AKTIVIERUNGS-BUTTON ---
         activationButton.addEventListener('click', () => {
             if (row.dataset.completed === 'true') {
                 alert("Dieses Spiel ist bereits abgeschlossen und kann nicht aktiviert werden.");
                 return;
             }
 
-            if (currentActiveGameRow === row) {
+            if (currentActiveGameRow === row) { // Deaktivieren
                 currentActiveGameRow = null;
-                localStorage.removeItem('activeGameName');
-                stopTimerButton.click(); // Timer stoppen, wenn das aktuell aktive Spiel deaktiviert wird
-
-            } else { // Wenn ein anderes Spiel aktiviert wird
-                if (currentActiveGameRow) { // Wenn bereits ein Spiel aktiv war
-                    // Optional: Prüfen, ob die Checkbox des vorherigen aktiven Spiels gecheckt war
-                    // Diese Logik ist etwas komplexer, wenn man den Checkbox-Status manuell steuert.
-                    // Für jetzt belassen wir es bei der Grundfunktion.
-                    // const prevActiveCheckbox = currentActiveGameRow.querySelector('input[type="checkbox"]');
-                    // if (prevActiveCheckbox && !prevActiveCheckbox.checked) {
-                    //     prevActiveCheckbox.checked = false; // Falls notwendig
-                    // }
-                    saveGames(); // Spielzeiten des VORHERIGEN aktiven Spiels speichern, BEVOR neues Spiel aktiviert wird
-                }
+                stopTimer(); // Timer stoppen, wenn das aktuell aktive Spiel deaktiviert wird
+            } else { // Aktivieren eines neuen Spiels
                 currentActiveGameRow = row;
-                localStorage.setItem('activeGameName', row.dataset.gameName);
-
+                // Aktives Spiel sollte nicht als "abgeschlossen" markiert sein
                 const activeGameCheckbox = row.querySelector('input[type="checkbox"]');
                 if (activeGameCheckbox) {
-                    activeGameCheckbox.checked = false; // Aktives Spiel sollte nicht als "abgeschlossen" markiert sein
+                    activeGameCheckbox.checked = false;
                     row.classList.remove('completed');
                     row.dataset.completed = 'false';
                 }
-
                 if (!timerInterval) { // Wenn Timer nicht läuft, starte ihn automatisch
-                    startTimerButton.click();
+                    startTimer();
                 }
             }
-            updateActivationButtonStates();
+            updateGamesArrayFromTable(); // Games-Array aktualisieren
+            saveStateToFirebase(); // Speichern
+            updateActivationButtonStates(); // Button-Zustände aktualisieren
         });
 
-        updateActivationButtonStates();
+        // Füge das Spiel zum 'games'-Array hinzu
+        if (saveAfterAdd) {
+             games.push({ name: name, time: timeInSeconds, completed: isCompleted });
+             saveStateToFirebase(); // Speichert das aktualisierte games-Array, wenn es neu hinzugefügt wird
+        }
+    };
+
+
+    // Aktualisiert das interne 'games'-Array basierend auf der aktuellen Tabelle
+    const updateGamesArrayFromTable = () => {
+        games = []; // Leere das Array
+        gamesTableBody.querySelectorAll('tr').forEach(row => {
+            games.push({
+                name: row.dataset.gameName,
+                time: parseInt(row.dataset.time),
+                completed: row.dataset.completed === 'true'
+            });
+        });
     };
 
     // Funktion zum Formatieren der Zeit (HH:MM:SS)
@@ -168,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
 
-        const pad = (num) => String(num).padStart(2, '0'); // Fügt führende Nullen hinzu
+        const pad = (num) => String(num).padStart(2, '0');
         return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     };
 
@@ -176,18 +239,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateActivationButtonStates = () => {
         gamesTableBody.querySelectorAll('tr').forEach(row => {
             const button = row.querySelector('.activation-button');
-            // const checkbox = row.querySelector('input[type="checkbox"]'); // Nicht direkt benötigt hier
 
-            if (!button) return; // Falls der Button nicht gefunden wird
+            if (!button) return;
 
             if (row.dataset.completed === 'true') {
                 button.textContent = 'Abgeschlossen';
                 button.style.backgroundColor = '#6c757d'; // Grau
-                button.disabled = true; // Button deaktivieren
+                button.disabled = true;
             } else if (currentActiveGameRow === row) {
                 button.textContent = 'Stoppen';
                 button.style.backgroundColor = '#ffc107'; // Gelb
-                button.style.color = '#333'; // Schwarzer Text auf gelb
+                button.style.color = '#333';
                 button.disabled = false;
             } else {
                 button.textContent = 'Aktivieren';
@@ -197,32 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
-    // ----- Daten Speichern und Laden (Local Storage) -----
-
-    // Funktion zum Speichern aller Spiele im Local Storage
-    const saveGames = () => {
-        const games = [];
-        gamesTableBody.querySelectorAll('tr').forEach(row => {
-            games.push({
-                name: row.dataset.gameName,
-                time: parseInt(row.dataset.time), // Zeit als Zahl speichern
-                completed: row.dataset.completed === 'true' // String 'true' zu Boolean true konvertieren
-            });
-        });
-        localStorage.setItem('winChallengeGames', JSON.stringify(games)); // Array als JSON-String speichern
-    };
-
-    // Funktion zum Laden aller Spiele aus dem Local Storage beim Start
-    const loadGames = () => {
-        const savedGames = localStorage.getItem('winChallengeGames');
-        if (savedGames) {
-            const games = JSON.parse(savedGames); // JSON-String in Array umwandeln
-            games.forEach(game => {
-                addGameRow(game.name, game.time, game.completed);
-            });
-        }
-    };
-
 
     // ----- Timer-Funktionen -----
 
@@ -232,106 +268,82 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Funktion zum Starten des Timers
-    startTimerButton.addEventListener('click', () => {
-        if (timerInterval) { // Wenn der Timer bereits läuft, nichts tun
+    const startTimer = () => {
+        if (timerInterval) {
             return;
         }
         timerInterval = setInterval(() => {
-            totalSeconds++; // Gesamtsekunden erhöhen
-            updateOverallTimerDisplay(); // Anzeige aktualisieren
-            saveTimerState(); // Gesamt-Timer-Status speichern
+            totalSeconds++;
+            updateOverallTimerDisplay();
 
-            // Wenn ein Spiel aktiv ist, dessen Zeit auch erhöhen
             if (currentActiveGameRow) {
                 let gameTime = parseInt(currentActiveGameRow.dataset.time || 0);
                 gameTime++;
                 currentActiveGameRow.dataset.time = gameTime;
                 currentActiveGameRow.cells[3].textContent = formatTime(gameTime); // Update in der Tabelle
-
-                // ENTSCHEIDEND: Speichere die Spiele JETZT jede Sekunde, wenn ein Spiel aktiv ist
-                // Das aktualisiert die Spielzeiten im Local Storage kontinuierlich.
-                saveGames();
             }
-        }, 1000); // Alle 1000 Millisekunden (1 Sekunde) ausführen
-        localStorage.setItem('timerRunning', 'true'); // Speichern, dass Timer läuft
-    });
+            saveStateToFirebase(); // Speichert den gesamten Zustand inkl. Zeiten
+        }, 1000);
+    };
 
     // Funktion zum Stoppen des Timers
-    stopTimerButton.addEventListener('click', () => {
-        clearInterval(timerInterval); // Timer stoppen
-        timerInterval = null; // Variable zurücksetzen
-        localStorage.setItem('timerRunning', 'false'); // Speichern, dass Timer gestoppt ist
-        saveGames(); // Spielzeiten jetzt speichern, wenn der Timer stoppt (wichtig für den letzten Stand)
-    });
+    const stopTimer = () => {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        saveStateToFirebase(); // Speichert den Zustand, wenn Timer stoppt
+    };
 
     // Funktion zum Zurücksetzen des Timers
     resetTimerButton.addEventListener('click', () => {
         if (confirm("Soll der Timer und alle Spielzeiten wirklich zurückgesetzt werden?")) {
-            clearInterval(timerInterval);
-            timerInterval = null;
+            stopTimer(); // Stoppt den Timer und speichert den Zustand
             totalSeconds = 0;
-            updateOverallTimerDisplay();
-            localStorage.removeItem('overallTimerSeconds'); // Aus Local Storage löschen
-            localStorage.setItem('timerRunning', 'false'); // Timerstatus auch zurücksetzen
-            localStorage.removeItem('activeGameName'); // Aktives Spiel auch zurücksetzen
-            currentActiveGameRow = null; // Aktives Spiel auch im JS zurücksetzen
+            currentActiveGameRow = null;
 
-            // Alle Spielzeiten zurücksetzen und Checkboxen unchecken
             gamesTableBody.querySelectorAll('tr').forEach(row => {
-                row.dataset.time = 0; // Datenattribut auf 0 setzen
-                row.cells[3].textContent = formatTime(0); // Anzeige aktualisieren (KORREKTUR: Index 3)
-                row.classList.remove('completed'); // Durchstreichen entfernen
-                row.dataset.completed = 'false'; // Status zurücksetzen
+                row.dataset.time = 0;
+                row.cells[3].textContent = formatTime(0);
+                row.classList.remove('completed');
+                row.dataset.completed = 'false';
 
                 const checkbox = row.querySelector('input[type="checkbox"]');
                 if (checkbox) {
-                    checkbox.checked = false; // Checkbox zurücksetzen
+                    checkbox.checked = false;
                 }
             });
-            saveGames(); // Zurückgesetzte Spielzeiten speichern
+            updateGamesArrayFromTable(); // Games-Array aktualisieren
+            saveStateToFirebase(); // Speichert den zurückgesetzten Zustand
+            updateOverallTimerDisplay();
+            updateActivationButtonStates();
         }
     });
 
-    // ----- Speichern und Laden des Timer-Status -----
+    // ----- Event Listener für die Buttons -----
 
-    // Funktion zum Speichern des Gesamt-Timer-Status
-    const saveTimerState = () => {
-        localStorage.setItem('overallTimerSeconds', totalSeconds);
-    };
-
-    // Funktion zum Laden des Gesamt-Timer-Status beim Start
-    const loadTimerState = () => {
-        const savedSeconds = localStorage.getItem('overallTimerSeconds');
-        if (savedSeconds !== null) {
-            totalSeconds = parseInt(savedSeconds);
-            updateOverallTimerDisplay();
+    saveTitleButton.addEventListener('click', () => {
+        const newTitle = challengeTitleInput.value.trim();
+        if (newTitle) {
+            challengeTitle = newTitle;
+            challengeTitleInput.value = '';
+        } else {
+            challengeTitle = 'Win Challenge'; // Setzt auf Standard, wenn leer
         }
-    };
+        saveStateToFirebase(); // Speichert Titel in Firebase
+    });
 
-    // ----- Initialisierung beim Laden der Seite (am Ende von DOMContentLoaded) -----
-    loadChallengeTitle(); // Gespeicherten Titel laden
-    loadGames();          // Gespeicherte Spiele laden
-    loadTimerState();     // Lade den gespeicherten Timer-Zustand
+    addGameButton.addEventListener('click', () => {
+        const gameName = prompt("Bitte gib den Namen des Spiels ein:");
+        if (gameName) {
+            addGameRow(gameName, 0, false, true); // addGameRow speichert selbst
+            challengeTitleInput.value = ''; // Optional: Leert Titelfeld
+        }
+    });
 
-    const wasTimerRunning = localStorage.getItem('timerRunning') === 'true';
-    const savedActiveGameName = localStorage.getItem('activeGameName');
+    startTimerButton.addEventListener('click', startTimer);
+    stopTimerButton.addEventListener('click', stopTimer);
 
-    if (savedActiveGameName) {
-        const rows = gamesTableBody.querySelectorAll('tr');
-        rows.forEach(row => {
-            if (row.dataset.gameName === savedActiveGameName) {
-                currentActiveGameRow = row;
-                // Die Checkbox-Logik beim Laden wird bereits in addGameRow und loadGames korrekt behandelt.
-                // updateActivationButtonStates() unten kümmert sich um den Button-Status.
-            }
-        });
-    }
 
-    // Wichtig: Nach dem Laden der Spiele und dem Setzen von currentActiveGameRow
-    updateActivationButtonStates(); // Rufe die Funktion auf, um die Button-Texte anzupassen
+    // ----- Initialisierung beim Laden der Seite -----
+    loadStateFromFirebase(); // Lade den gesamten Zustand aus Firebase beim Start
 
-    // Starte den Timer, wenn er zuvor lief
-    if (wasTimerRunning) {
-        startTimerButton.click();
-    }
 }); // Ende des DOMContentLoaded-Event-Listeners
