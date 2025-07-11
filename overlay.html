@@ -9,7 +9,7 @@
 </head>
 <body>
     <div id="overlay-container">
-        <h1 id="overlay-challenge-title"></h1>
+        <h1 id="overlayChallengeTitle"></h1>
 
         <ul id="overlay-game-list">
             </ul>
@@ -17,7 +17,36 @@
         <div id="overlay-total-time-container">
             Gesamtzeit: <span id="overlay-total-time">00:00:00</span>
         </div>
-        
+        <div id="obs-controls" style="background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; margin-top: 20px;">
+    <h2>Challenge Steuerung (Nur in OBS Interaktion)</h2>
+    
+    <label for="obsTitleInput" style="color: white;">Titel ändern:</label><br>
+    <input type="text" id="obsTitleInput" placeholder="Neuer Titel" style="width: 80%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;"><br>
+    <button id="obsSaveTitleBtn" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Titel speichern</button>
+    <hr style="border-color: #555; margin: 15px 0;">
+
+    <label for="obsGameInput" style="color: white;">Spiel hinzufügen:</label><br>
+    <input type="text" id="obsGameInput" placeholder="Neues Spiel" style="width: 80%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;"><br>
+    <button id="obsAddGameBtn" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Spiel hinzufügen</button>
+    <hr style="border-color: #555; margin: 15px 0;">
+
+    <button id="obsStartTimerBtn" style="padding: 10px 20px; background: #ffc107; color: black; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">Timer starten</button>
+    <button id="obsStopTimerBtn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">Timer stoppen</button>
+    <button id="obsResetTimerBtn" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">Timer zurücksetzen</button>
+    <hr style="border-color: #555; margin: 15px 0;">
+
+    <label style="color: white;">Aktives Spiel setzen:</label><br>
+    <select id="obsActiveGameSelect" style="width: 80%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;">
+        </select><br>
+    <button id="obsSetActiveGameBtn" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Als aktiv setzen</button>
+    <hr style="border-color: #555; margin: 15px 0;">
+    
+    <label style="color: white;">Spiel abschließen:</label><br>
+    <select id="obsCompleteGameSelect" style="width: 80%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #555; background: #333; color: white;">
+        </select><br>
+    <button id="obsCompleteGameBtn" style="padding: 8px 15px; background: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer;">Spiel abschließen</button>
+
+</div>
         <div id="page-indicators">
             </div>
     </div>
